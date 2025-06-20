@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Novel Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- 
+      ENVIRONMENT VARIABLE FOR API KEY:
+      To deploy this on a service like Cloudflare Pages, you can replace the empty string below 
+      with your actual Gemini API key. If a key is provided here, the input field on the page 
+      will be hidden, and this key will be used for all requests.
+    -->
+    <script>
+        window.GEMINI_API_KEY = ""; 
+    </script>
+</head>
+<body class="bg-gray-900 text-gray-200 flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-book-open text-2xl text-blue-400"></i>
+                    <h1 class="text-xl font-bold tracking-tight text-white">AI Novel Translator</h1>
+                </div>
+                <a href="https://github.com/yourusername/novel-translator" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fab fa-github text-2xl"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+
+            <!-- Input Section -->
+            <div class="flex flex-col space-y-4">
+                <div id="apiKeyContainer" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <label for="apiKey" class="block text-sm font-medium text-gray-400 mb-2">Your Gemini API Key</label>
+                    <div class="relative">
+                        <input type="password" id="apiKey" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your Google AI Studio API Key">
+                        <button id="toggleApiVisibility" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-300">
+                           <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser and used to call the Gemini API directly.</p>
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <label for="modelSelector" class="block text-sm font-medium text-gray-400 mb-2">Choose a Model</label>
+                    <select id="modelSelector" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Efficient)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 (Higher Quality)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2">Gemini API free tier offers 1000 requests per day.</p>
+                </div>
+
+
+                <div class="flex-grow flex flex-col bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                    <div class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
+                        <h2 class="font-semibold text-lg">Original Text (Chinese)</h2>
+                        <div class="flex items-center space-x-2">
+                             <button id="uploadBtn" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
+                                <i class="fas fa-upload"></i>
+                                <span>Upload .txt</span>
+                            </button>
+                            <input type="file" id="fileInput" class="hidden" accept=".txt">
+                            <button id="clearBtn" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">Clear</button>
+                        </div>
+                    </div>
+                    <textarea id="inputText" class="w-full h-full flex-grow bg-gray-900 p-4 text-gray-300 resize-none focus:outline-none custom-scrollbar" placeholder="Paste your Chinese novel text here..."></textarea>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="flex flex-col bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <div class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
+                    <h2 class="font-semibold text-lg">Translated Text (English)</h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="copyBtn" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
+                            <i class="fas fa-copy"></i>
+                            <span id="copyBtnText">Copy</span>
+                        </button>
+                        <button id="downloadMdBtn" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
+                            <i class="fas fa-download"></i>
+                            <span>.md</span>
+                        </button>
+                         <button id="downloadTxtBtn" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
+                            <i class="fas fa-download"></i>
+                            <span>.txt</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="outputText" class="w-full h-full flex-grow bg-gray-900 p-4 text-gray-300 overflow-y-auto custom-scrollbar prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
+                     <div id="placeholder" class="flex flex-col items-center justify-center h-full text-gray-500">
+                        <i class="fas fa-magic text-4xl mb-4"></i>
+                        <p class="text-center">Your translated text will appear here.</p>
+                    </div>
+                    <div id="loadingIndicator" class="hidden flex-col items-center justify-center h-full text-gray-400">
+                        <div class="loader"></div>
+                        <p class="mt-4 text-center">Translating with AI... this may take a moment.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-6 flex justify-center">
+            <button id="translateBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center space-x-3">
+                <i class="fas fa-language text-2xl"></i>
+                <span>Translate Now</span>
+            </button>
+        </div>
+        
+         <!-- Message Box -->
+        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+            <p id="messageText"></p>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Element references
+            const apiKeyContainer = document.getElementById('apiKeyContainer');
+            const apiKeyInput = document.getElementById('apiKey');
+            const toggleApiVisibilityBtn = document.getElementById('toggleApiVisibility');
+            const modelSelector = document.getElementById('modelSelector');
+            const inputText = document.getElementById('inputText');
+            const outputText = document.getElementById('outputText');
+            const translateBtn = document.getElementById('translateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyBtnText = document.getElementById('copyBtnText');
+            const downloadMdBtn = document.getElementById('downloadMdBtn');
+            const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+            const placeholder = document.getElementById('placeholder');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+
+            let translatedContent = '';
+
+            // --- API KEY HANDLING ---
+            if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
+                apiKeyContainer.style.display = 'none';
+            } else {
+                apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+                apiKeyInput.addEventListener('input', () => {
+                    localStorage.setItem('geminiApiKey', apiKeyInput.value);
+                });
+            }
+
+            // --- UI EVENT LISTENERS ---
+            toggleApiVisibilityBtn.addEventListener('click', () => {
+                const icon = toggleApiVisibilityBtn.querySelector('i');
+                if (apiKeyInput.type === 'password') {
+                    apiKeyInput.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    apiKeyInput.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+
+            clearBtn.addEventListener('click', () => {
+                inputText.value = '';
+            });
+
+            uploadBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        inputText.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            translateBtn.addEventListener('click', handleTranslation);
+
+            copyBtn.addEventListener('click', () => {
+                const textarea = document.createElement('textarea');
+                textarea.value = translatedContent;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    copyBtnText.textContent = 'Copied!';
+                    setTimeout(() => { copyBtnText.textContent = 'Copy'; }, 2000);
+                } catch (err) {
+                    showMessage('Failed to copy text.');
+                }
+                document.body.removeChild(textarea);
+            });
+            
+            downloadMdBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.md', 'text/markdown'));
+            downloadTxtBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.txt', 'text/plain'));
+
+
+            // --- CORE FUNCTIONS ---
+            function showMessage(message, duration = 3000) {
+                messageText.textContent = message;
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, duration);
+            }
+
+            function setUIState(state) {
+                if (state === 'loading') {
+                    loadingIndicator.classList.remove('hidden');
+                    loadingIndicator.classList.add('flex');
+                    placeholder.classList.add('hidden');
+                    translateBtn.disabled = true;
+                    translateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    outputText.innerHTML = '';
+                    outputText.appendChild(loadingIndicator);
+                } else { // idle state
+                    loadingIndicator.classList.add('hidden');
+                    loadingIndicator.classList.remove('flex');
+                    translateBtn.disabled = false;
+                    translateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+
+                const hasContent = translatedContent.length > 0;
+                copyBtn.disabled = !hasContent;
+                downloadMdBtn.disabled = !hasContent;
+                downloadTxtBtn.disabled = !hasContent;
+            }
+
+            function downloadFile(content, fileName, contentType) {
+                const a = document.createElement('a');
+                const file = new Blob([content], { type: contentType });
+                a.href = URL.createObjectURL(file);
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+
+            async function handleTranslation() {
+                let apiKey = '';
+                if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
+                    apiKey = window.GEMINI_API_KEY;
+                } else {
+                    apiKey = apiKeyInput.value.trim();
+                }
+
+                const textToTranslate = inputText.value.trim();
+                const selectedModel = modelSelector.value;
+
+                if (!apiKey) {
+                    showMessage('Please provide a Gemini API key.');
+                    return;
+                }
+                if (!textToTranslate) {
+                    showMessage('Please enter some text to translate.');
+                    return;
+                }
+
+                setUIState('loading');
+                translatedContent = '';
+                
+                const literaryPrompt = `You are an expert literary translator specializing in Chinese-to-English translation with deep cultural understanding, creative flair, and mastery of language. Your task is to translate the following Chinese novel chapter into polished, natural English, preserving cultural authenticity, emotional nuance, and literary style. This should read like a native English literary work that amazes readers and earns praise.
+
+Your language should be:
+- Smooth, emotionally rich, and well-paced
+- Easy to understand for common English readers, including non-native speakers
+- Not overly simplistic or childish—keep a refined tone, but avoid using obscure or overly advanced vocabulary
+- Appropriate for an international audience who enjoys translated fiction
+
+Translation Guidelines:
+1. Maintain original tone, style, rhythm, and emotional depth.
+2. Preserve paragraph structure and pacing.
+3. Keep proper names and places in pinyin (e.g., "Li Wei", "Beijing").
+4. Translate idioms and proverbs as follows:
+- Use an English equivalent
+- Then include the original Chinese in pinyin (e.g., "A single spark can start a prairie fire (Xīngxīng zhī huǒ, kěyǐ liáoyuán)").
+5. Preserve Chinese internet slang and acronyms:
+- Common terms: "yyds" (永远的神), "awsl" (啊我死了), "xswl" (笑死我了), "zqsg" (真情实感), "tql" (太强了), "nb" (牛逼), "gg" (good game), "666", "carry", "AFK", "rush", "gank", "noob"
+- Retain original slang, explain in footnotes.
+6. Maintain honorifics, prefixes, and suffixes:
+- Prefixes: "Lao", "Xiao", "Da", "A"
+- Suffixes: "er", "zi", "tou", "wa"
+- Common honorifics: "Shifu", "Daozhang", "Xiansheng"
+- Family titles: "Gege", "Jiejie", "Shixiong", "Shimei"
+- Xianxia/Wuxia ranks/titles: "Zongzhu", "Zhangmen", "Zhanglao", "Dizi", "Nei Men Dizi", "Wai Men Dizi", "Xianzun", "Zhenjun", "Shangxian", "Daozu", "Shishu", "Shibo", "Shizu"
+7. Preserve wordplay and puns:
+- Retain original phrasing when possible
+- Reconstruct in English or explain in footnotes
+8. For cultural concepts:
+- Keep the Chinese term in pinyin
+- Briefly explain in parentheses on first use
+- Add a footnote if relevant
+
+Formatting Requirements:
+1. Preserve paragraph spacing with one blank line between paragraphs.
+2. Format dialogue using quotation marks.
+3. Use *italics* for:
+- Internal thoughts
+- Emphasis
+- Spiritual transmissions (if used)
+4. Add footnotes at the end (up to 10) for:
+- Cultural/historical context
+- Internet slang explanations
+- Idioms and literary references
+- Wordplay or puns
+
+Footnotes Format:
+Numbered footnotes at the end of the translation. Examples:
+1. yyds (永远的神): “Eternal god”; used to refer to someone as the GOAT (Greatest of All Time).
+2. nb (牛逼): Vulgar slang meaning “badass” or extremely powerful.
+
+Quality Checklist (Mandatory):
+- Smooth, natural English that flows well and respects original tone
+- No content lost or added
+- Emotion and style faithfully preserved
+- Character names and terms consistent
+- No chinese characters; everything should be translated into English along with pinyin where necessary
+- Strictly check the footnotes for accuracy and relevance.
+- Follow the formatting requirements meticulously.
+
+Your translation should be beautiful, authentic, accessible, and faithful. Output only the translated text and footnotes. Do not explain your process.`;
+                
+                const fullPrompt = `${literaryPrompt}\n\nTranslate the following text:\n\n---\n\n${textToTranslate}`;
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: fullPrompt }] }],
+                            generationConfig: {
+                                temperature: 0.7,
+                                topK: 1,
+                                topP: 1,
+                                maxOutputTokens: 8192,
+                            },
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error ? errorData.error.message : 'API request failed');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        translatedContent = data.candidates[0].content.parts[0].text;
+                        let htmlContent = translatedContent
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/\n/g, '<br>');
+                        
+                        outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
+
+                    } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+                         throw new Error(`Translation blocked by safety settings. Reason: ${data.promptFeedback.blockReason}`);
+                    } else {
+                        throw new Error('Received an empty response from the API.');
+                    }
+
+                } catch (error) {
+                    console.error('Translation Error:', error);
+                    showMessage(`Error: ${error.message}`);
+                    outputText.innerHTML = '';
+                    outputText.appendChild(placeholder);
+                    placeholder.classList.remove('hidden');
+
+                } finally {
+                    setUIState('idle');
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
