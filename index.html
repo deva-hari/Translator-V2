@@ -185,7 +185,7 @@
         </div>
         
          <!-- Message Box -->
-        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
             <p id="messageText"></p>
         </div>
     </main>
@@ -453,10 +453,13 @@ Your translation should be beautiful, authentic, accessible, and faithful. Outpu
 
 
             // --- UTILITY FUNCTIONS ---
-            function showMessage(message, duration = 4000) {
+            function showMessage(message, duration = 3000) {
+                const box = elements.messageBox;
+                box.classList.remove('hidden');
+                box.classList.remove('bg-red-500', 'bg-green-600');
+                box.classList.add('bg-green-600');
                 elements.messageText.textContent = message;
-                elements.messageBox.classList.remove('hidden');
-                setTimeout(() => { elements.messageBox.classList.add('hidden'); }, duration);
+                setTimeout(() => { box.classList.add('hidden'); }, duration);
             }
 
             function setUIState(state, loadingMsg = '') {
