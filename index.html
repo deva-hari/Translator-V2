@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Novel Translator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Novel Translator</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet">
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <style>
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -54,174 +58,235 @@
             transition: max-height 0.3s ease-out;
         }
     </style>
-    <script>
+        <script>
         window.GEMINI_API_KEY = ""; 
     </script>
-</head>
-<body class="bg-gray-900 text-gray-200 flex flex-col min-h-screen">
+    </head>
+    <body class="bg-gray-900 text-gray-200 flex flex-col min-h-screen">
 
-    <!-- Header -->
-    <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-book-open text-2xl text-blue-400"></i>
-                    <h1 class="text-xl font-bold tracking-tight text-white">AI Novel Translator</h1>
+        <!-- Header -->
+        <header
+            class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-book-open text-2xl text-blue-400"></i>
+                        <h1
+                            class="text-xl font-bold tracking-tight text-white">AI
+                            Novel Translator</h1>
+                    </div>
+                    <a href="https://github.com/deva-hari/Translator-V2"
+                        target="_blank"
+                        class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fab fa-github text-2xl"></i>
+                    </a>
                 </div>
-                <a href="https://github.com/deva-hari/Translator-V2" target="_blank" class="text-gray-400 hover:text-white transition-colors">
-                    <i class="fab fa-github text-2xl"></i>
-                </a>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex flex-col space-y-6">
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col space-y-6">
 
-            <!-- Settings Section -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div id="apiKeyContainer" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                    <label for="apiKey" class="block text-sm font-medium text-gray-400 mb-2">Your Gemini API Key</label>
-                    <div class="relative">
-                        <input type="password" id="apiKey" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your Google AI Studio API Key">
-                        <button id="toggleApiVisibility" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-300">
-                           <i class="fas fa-eye"></i>
+                <!-- Settings Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div id="apiKeyContainer"
+                        class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <label for="apiKey"
+                            class="block text-sm font-medium text-gray-400 mb-2">Your
+                            Gemini API Key</label>
+                        <div class="relative">
+                            <input type="password" id="apiKey"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                placeholder="Enter your Google AI Studio API Key">
+                            <button id="toggleApiVisibility"
+                                class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-300">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                        <label for="modelSelector"
+                            class="block text-sm font-medium text-gray-400 mb-2">Choose
+                            a Model</label>
+                        <select id="modelSelector"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash
+                                (Fast & Efficient)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 (Higher
+                                Quality)</option>
+                            <option value="gemini-2.0-flash-lite">Gemini 2.0
+                                Flash Lite (Stupid Fast, So-So)</option>
+                            <option
+                                value="gemini-2.5-flash-lite-preview-06-17">Gemini
+                                2.5 Flash (Stupid Fast, So-So,
+                                Unstable)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">Free tier offers
+                            60 requests per minute. Batch translation includes a
+                            1s delay per file.</p>
+                    </div>
+                </div>
+
+                <!-- Input Section -->
+                <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                    <div class="mb-4 border-b border-gray-700">
+                        <nav class="flex space-x-2" aria-label="Tabs">
+                            <button id="tab-text"
+                                class="tab-active px-4 py-2 text-sm font-medium rounded-t-md">Text
+                                / Single File</button>
+                            <button id="tab-batch"
+                                class="tab-inactive px-4 py-2 text-sm font-medium rounded-t-md">Multiple
+                                Files (Batch)</button>
+                        </nav>
+                    </div>
+
+                    <!-- Collapsible Prompt Section -->
+                    <div class="mb-4">
+                        <button id="prompt-toggle"
+                            class="w-full flex justify-between items-center text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md">
+                            <span class="font-medium text-gray-200">Customize
+                                Translation Prompt</span>
+                            <i id="prompt-chevron"
+                                class="fas fa-chevron-down transition-transform"></i>
+                        </button>
+                        <div id="prompt-content" class="collapsible-content">
+                            <textarea id="promptText"
+                                class="w-full h-48 mt-2 bg-gray-900 p-3 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Text / Single File Input -->
+                    <div id="panel-text">
+                        <textarea id="inputText"
+                            class="w-full h-48 bg-gray-900 p-4 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar"
+                            placeholder="Paste your Chinese novel text here, or upload a single .txt file..."></textarea>
+                        <div class="flex justify-between items-center mt-3">
+                            <label for="singleFileInput"
+                                class="cursor-pointer px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
+                                <i class="fas fa-upload"></i>
+                                <span>Upload Single .txt</span>
+                            </label>
+                            <input type="file" id="singleFileInput"
+                                class="hidden" accept=".txt">
+                            <button id="clearBtn"
+                                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- Multiple File Input -->
+                    <div id="panel-batch" class="hidden">
+                        <div
+                            class="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10">
+                            <i
+                                class="fas fa-folder-open text-4xl text-gray-500 mb-4"></i>
+                            <label for="multiFileInput"
+                                class="relative cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
+                                <span>Select Files</span>
+                                <input id="multiFileInput" type="file" multiple
+                                    class="sr-only" accept=".txt">
+                            </label>
+                            <p class="mt-2 text-sm text-gray-500"
+                                id="file-list-info">Select multiple .txt files
+                                to translate and zip.</p>
+                        </div>
+                    </div>
+                    <!-- Translate Action Button -->
+                    <div class="mt-6 flex justify-center">
+                        <button id="translateBtn"
+                            class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center space-x-3">
+                            <i class="fas fa-language text-2xl"></i>
+                            <span id="translateBtnText">Translate Now</span>
                         </button>
                     </div>
                 </div>
-                <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                    <label for="modelSelector" class="block text-sm font-medium text-gray-400 mb-2">Choose a Model</label>
-                    <select id="modelSelector" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Efficient)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 (Higher Quality)</option>
-                        <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Stupid Fast, So-So)</option>
-                        <option value="gemini-2.5-flash-lite-preview-06-17">Gemini 2.5 Flash (Stupid Fast, So-So, Unstable)</option>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-2">Free tier offers 60 requests per minute. Batch translation includes a 1s delay per file.</p>
-                </div>
-            </div>
 
-            <!-- Input Section -->
-            <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                <div class="mb-4 border-b border-gray-700">
-                    <nav class="flex space-x-2" aria-label="Tabs">
-                        <button id="tab-text" class="tab-active px-4 py-2 text-sm font-medium rounded-t-md">Text / Single File</button>
-                        <button id="tab-batch" class="tab-inactive px-4 py-2 text-sm font-medium rounded-t-md">Multiple Files (Batch)</button>
-                    </nav>
-                </div>
-                
-                 <!-- Collapsible Prompt Section -->
-                <div class="mb-4">
-                    <button id="prompt-toggle" class="w-full flex justify-between items-center text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md">
-                        <span class="font-medium text-gray-200">Customize Translation Prompt</span>
-                        <i id="prompt-chevron" class="fas fa-chevron-down transition-transform"></i>
-                    </button>
-                    <div id="prompt-content" class="collapsible-content">
-                        <textarea id="promptText" class="w-full h-48 mt-2 bg-gray-900 p-3 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar"></textarea>
+                <!-- Output Section -->
+                <div id="outputContainer"
+                    class="bg-gray-800 rounded-lg border border-gray-700 min-h-[300px] flex flex-col overflow-hidden">
+                    <div
+                        class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
+                        <h2 id="outputTitle"
+                            class="font-semibold text-lg">Translated Text</h2>
+                        <div id="outputActions"
+                            class="flex items-center space-x-2">
+                            <button id="copyBtn"
+                                class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+                                disabled>
+                                <i class="fas fa-copy"></i>
+                                <span id="copyBtnText">Copy</span>
+                            </button>
+                            <button id="downloadMdBtn"
+                                class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+                                disabled>
+                                <i class="fas fa-download"></i>
+                                <span>.md</span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-
-                <!-- Text / Single File Input -->
-                <div id="panel-text">
-                    <textarea id="inputText" class="w-full h-48 bg-gray-900 p-4 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar" placeholder="Paste your Chinese novel text here, or upload a single .txt file..."></textarea>
-                    <div class="flex justify-between items-center mt-3">
-                         <label for="singleFileInput" class="cursor-pointer px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
-                            <i class="fas fa-upload"></i>
-                            <span>Upload Single .txt</span>
-                        </label>
-                        <input type="file" id="singleFileInput" class="hidden" accept=".txt">
-                        <button id="clearBtn" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">Clear</button>
-                    </div>
-                </div>
-
-                <!-- Multiple File Input -->
-                <div id="panel-batch" class="hidden">
-                    <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10">
-                        <i class="fas fa-folder-open text-4xl text-gray-500 mb-4"></i>
-                        <label for="multiFileInput" class="relative cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
-                            <span>Select Files</span>
-                            <input id="multiFileInput" type="file" multiple class="sr-only" accept=".txt">
-                        </label>
-                        <p class="mt-2 text-sm text-gray-500" id="file-list-info">Select multiple .txt files to translate and zip.</p>
-                    </div>
-                </div>
-                 <!-- Translate Action Button -->
-                <div class="mt-6 flex justify-center">
-                    <button id="translateBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center space-x-3">
-                        <i class="fas fa-language text-2xl"></i>
-                        <span id="translateBtnText">Translate Now</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Output Section -->
-            <div id="outputContainer" class="bg-gray-800 rounded-lg border border-gray-700 min-h-[300px] flex flex-col overflow-hidden">
-                <div class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
-                    <h2 id="outputTitle" class="font-semibold text-lg">Translated Text</h2>
-                    <div id="outputActions" class="flex items-center space-x-2">
-                        <button id="copyBtn" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
-                            <i class="fas fa-copy"></i>
-                            <span id="copyBtnText">Copy</span>
-                        </button>
-                        <button id="downloadMdBtn" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
-                            <i class="fas fa-download"></i>
-                            <span>.md</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="outputText" class="w-full h-full flex-grow bg-gray-900 p-6 text-gray-300 overflow-y-auto custom-scrollbar prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
-                     <div id="placeholder" class="flex flex-col items-center justify-center h-full text-gray-500">
-                        <i class="fas fa-magic text-4xl mb-4"></i>
-                        <p class="text-center">Your translated text will appear here.</p>
-                    </div>
-                    <div id="loadingIndicator" class="hidden flex-col items-center justify-center h-full text-gray-400">
-                        <div class="loader"></div>
-                        <p id="loadingText" class="mt-4 text-center">Translating with AI... this may take a moment.</p>
+                    <div id="outputText"
+                        class="w-full h-full flex-grow bg-gray-900 p-6 text-gray-300 overflow-y-auto custom-scrollbar prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
+                        <div id="placeholder"
+                            class="flex flex-col items-center justify-center h-full text-gray-500">
+                            <i class="fas fa-magic text-4xl mb-4"></i>
+                            <p class="text-center">Your translated text will
+                                appear here.</p>
+                        </div>
+                        <div id="loadingIndicator"
+                            class="hidden flex-col items-center justify-center h-full text-gray-400">
+                            <div class="loader"></div>
+                            <p id="loadingText"
+                                class="mt-4 text-center">Translating with AI...
+                                this may take a moment.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-         <!-- Message Box -->
-        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-            <p id="messageText"></p>
-        </div>
-    </main>
 
-    <script>
+            <!-- Message Box -->
+            <div id="messageBox"
+                class="hidden fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+                <p id="messageText"></p>
+            </div>
+        </main>
+
+        <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- GLOBAL STATE ---
             let currentMode = 'text'; // 'text' or 'batch'
             let translatedContent = '';
             let filesToProcess = [];
-            const defaultPrompt = `You are an expert literary translator specializing in Chinese-to-English translation with deep cultural understanding, creative flair, and mastery of language. Your task is to translate the following Chinese novel chapter into polished, natural English, preserving cultural authenticity, emotional nuance, and literary style. This should read like a native English literary work that amazes readers and earns praise.
-Your language should be:
-- Smooth, emotionally rich, and well-paced
-- Easy to understand for common English readers
-- Not overly simplistic or childish—keep a refined tone.
-Translation Guidelines:
-1. Maintain original tone, style, rhythm, and emotional depth.
-2. Preserve paragraph structure and pacing.
-3. Keep proper names and places in pinyin.
-4. Translate idioms and proverbs as follows: Use an English equivalent, then include the original Chinese in pinyin.
-5. Preserve Chinese internet slang and acronyms, explaining them in footnotes.
-6. Maintain honorifics, prefixes, and suffixes.
-7. Preserve wordplay and puns, reconstructing in English or explaining in footnotes.
-8. For cultural concepts, keep the Chinese term in pinyin and briefly explain in parentheses on first use.
-Formatting Requirements:
-1. Preserve paragraph spacing.
-2. Format dialogue using quotation marks.
-3. Use *italics* for internal thoughts or emphasis.
-4. Add numbered footnotes at the end for cultural context, slang, or idioms.
-Quality Checklist (Mandatory):
-- Smooth, natural English flow.
-- No content lost or added.
-- Character names and terms consistent.
-- No chinese characters; everything should be translated into English along with pinyin where necessary.
-- Follow formatting requirements meticulously.
-Your translation should be beautiful, authentic, accessible, and faithful. Output only the translated text and footnotes. Do not explain your process.`;
+            // 🌟 WILD & CREATIVE DEFAULT PROMPT 🌟
+            const defaultPrompt = `You are a masterful literary alchemist, conjuring English translations from Chinese novels that dazzle, move, and enthrall. Your translation should read as if penned by a celebrated English novelist—fluid, vivid, and emotionally charged, yet true to the soul of the original.
+
+            Your Mission:
+            - Transform the Chinese text into English that sings—natural, immersive, and brimming with literary flair.
+            - Capture every nuance, every sigh, every unspoken tension. Make the reader feel as if the story was born in English, but never betray its Chinese heart.
+
+            Artistic Directives:
+            1. Flow & Rhythm: Let sentences dance. Favor elegance, but never at the cost of clarity or feeling.
+            2. Cultural Magic: Weave Chinese cultural references seamlessly, using pinyin for names and places. For unique concepts, introduce them with a poetic English gloss and pinyin (e.g., "jianghu (the wandering martial world)").
+            3. Dialogue: Wrap spoken words in quotation marks. Let voices ring true—distinct, alive, and full of character.
+            4. Internal Thoughts: Render thoughts or emphasis in italics, as if whispered to the soul.
+            5. Idioms & Proverbs: Translate with a fitting English equivalent, then add the original in pinyin in parentheses. (e.g., "A drop in the ocean (沧海一粟 – cāng hǎi yī sù)")
+            6. Slang & Internet Speak: Keep Chinese slang/acronyms, explaining them in whimsical, numbered footnotes.
+            7. Wordplay: Reimagine puns and wordplay in English. If impossible, explain the magic in a footnote.
+            8. Honorifics: Preserve all honorifics, prefixes, and suffixes—let the social dance remain.
+
+            Formatting:
+            - Keep paragraph breaks and pacing as in the original.
+            - No Chinese characters in the main text (pinyin is welcome).
+            - Numbered footnotes at the end for cultural notes, slang, or untranslatable wordplay.
+
+            Quality Checklist:
+            - English that flows like a river—never stilted, never awkward.            
+            - Translation should flow like a novel that exhilarates its reader, add pinch of creativity
+            - No content lost, no content invented.
+            - Consistent names and terminology.
+            - Formatting rules above are sacred.
+
+            Output ONLY the translated story and footnotes. No commentary, no explanations—let the art speak for itself.`;
 
 
             // --- ELEMENT REFERENCES ---
@@ -531,5 +596,5 @@ Your translation should be beautiful, authentic, accessible, and faithful. Outpu
         });
     </script>
 
-</body>
+    </body>
 </html>
