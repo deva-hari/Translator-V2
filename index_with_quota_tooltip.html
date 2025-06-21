@@ -102,7 +102,12 @@
         .text-gray-900 {
             color: #111827;
         }
-        </style>
+        
+.tooltip:hover .tooltip-content {
+    display: block;
+}
+
+</style>
         <script>
         window.GEMINI_API_KEY = ""; 
     </script>
@@ -179,6 +184,13 @@
                                 2.5 Flash (Stupid Fast, So-So,
                                 Unstable)</option>
                         </select>
+<div id="quotaTooltip" class="mt-1 text-xs text-gray-400 tooltip inline-block relative cursor-help">
+    <span id="quotaDisplay">Quota: --</span>
+    <div class="tooltip-content absolute bottom-full left-0 mb-1 hidden bg-gray-700 text-white text-xs p-2 rounded shadow-lg z-10">
+        Requests per Day (RPD) and Requests per Minute (RPM) are free tier limits for your selected model.
+    </div>
+</div>
+
                         <p class="text-xs text-gray-500 mt-2">Free tier offers
                             60 requests per minute. Batch translation includes a
                             1s delay per file.</p>
@@ -347,42 +359,6 @@
 
         <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- GLOBAL STATE ---
-            let currentMode = 'text'; // 'text' or 'batch'
-            let translatedContent = '';
-            let filesToProcess = [];
-            // 🌟 WILD & CREATIVE DEFAULT PROMPT 🌟
-            const defaultPrompt = `You are a masterful literary alchemist, conjuring English translations from Chinese novels that dazzle, move, and enthrall. Your translation should read as if penned by a celebrated English novelist—fluid, vivid, and emotionally charged, yet true to the soul of the original.
-
-            Your Mission:
-            - Transform the Chinese text into English that sings—natural, immersive, and brimming with literary flair.
-            - Capture every nuance, every sigh, every unspoken tension. Make the reader feel as if the story was born in English, but never betray its Chinese heart.
-
-            Artistic Directives:
-            1. Flow & Rhythm: Let sentences dance. Favor elegance, but never at the cost of clarity or feeling.
-            2. Cultural Magic: Weave Chinese cultural references seamlessly, using pinyin for names and places. For unique concepts, introduce them with a poetic English gloss and pinyin (e.g., "jianghu (the wandering martial world)").
-            3. Dialogue: Wrap spoken words in quotation marks. Let voices ring true—distinct, alive, and full of character.
-            4. Internal Thoughts: Render thoughts or emphasis in italics, as if whispered to the soul.
-            5. Idioms & Proverbs: Translate with a fitting English equivalent, then add the original in pinyin in parentheses. (e.g., "A drop in the ocean (沧海一粟 – cāng hǎi yī sù)")
-            6. Slang & Internet Speak: Keep Chinese slang/acronyms, explaining them in whimsical, numbered footnotes.
-            7. Wordplay: Reimagine puns and wordplay in English. If impossible, explain the magic in a footnote.
-            8. Honorifics: Preserve all honorifics, prefixes, and suffixes—let the social dance remain.
-
-            Formatting:
-            - Keep paragraph breaks and pacing as in the original.
-            - No Chinese characters in the main text (pinyin is welcome).
-            - Numbered footnotes at the end for cultural notes, slang, or untranslatable wordplay.
-
-            Quality Checklist:
-            - English that flows like a river—never stilted, never awkward.            
-            - Translation should flow like a novel that exhilarates its reader, add pinch of creativity
-            - No content lost, no content invented.
-            - Consistent names and terminology.
-            - Formatting rules above are sacred.
-
-            Output ONLY the translated story and footnotes. No commentary, no explanations—let the art speak for itself.`;
-
-
             // --- ELEMENT REFERENCES ---
             const elements = {
                 apiKeyContainer: document.getElementById('apiKeyContainer'),
@@ -427,6 +403,67 @@
                 themeToggle: document.getElementById('themeToggle'),
                 apiQuotaInfo: document.getElementById('apiQuotaInfo'),
             };
+
+            // --- QUOTA TOOLTIP ---
+            const GEMINI_QUOTAS = {
+                "gemini-2.0-flash":     { rpd: 1500, rpm: 15 },
+                "gemini-2.5-flash":     { rpd: 500,  rpm: 10 },
+                "gemini-2.0-flash-lite":{ rpd: 1500, rpm: 30 },
+                "gemini-2.5-flash-lite-preview-06-17": { rpd: 500, rpm: 15 },
+            };
+            function updateQuotaDisplay() {
+                const model = elements.modelSelector.value;
+                const quota = GEMINI_QUOTAS[model];
+                const quotaDisplay = document.getElementById("quotaDisplay");
+                if (quotaDisplay) {
+                    if (quota) {
+                        quotaDisplay.textContent = `Quota: ${quota.rpd} RPD | ${quota.rpm} RPM`;
+                    } else {
+                        quotaDisplay.textContent = "Quota: --";
+                    }
+                }
+            }
+            elements.modelSelector.addEventListener('change', () => {
+                updateQuotaDisplay();
+                saveSettings();
+            });
+            updateQuotaDisplay();
+
+            // --- GLOBAL STATE ---
+            let currentMode = 'text'; // 'text' or 'batch'
+            let translatedContent = '';
+            let filesToProcess = [];
+            // 🌟 WILD & CREATIVE DEFAULT PROMPT 🌟
+            const defaultPrompt = `You are a masterful literary alchemist, conjuring English translations from Chinese novels that dazzle, move, and enthrall. Your translation should read as if penned by a celebrated English novelist—fluid, vivid, and emotionally charged, yet true to the soul of the original.
+
+            Your Mission:
+            - Transform the Chinese text into English that sings—natural, immersive, and brimming with literary flair.
+            - Capture every nuance, every sigh, every unspoken tension. Make the reader feel as if the story was born in English, but never betray its Chinese heart.
+
+            Artistic Directives:
+            1. Flow & Rhythm: Let sentences dance. Favor elegance, but never at the cost of clarity or feeling.
+            2. Cultural Magic: Weave Chinese cultural references seamlessly, using pinyin for names and places. For unique concepts, introduce them with a poetic English gloss and pinyin (e.g., "jianghu (the wandering martial world)").
+            3. Dialogue: Wrap spoken words in quotation marks. Let voices ring true—distinct, alive, and full of character.
+            4. Internal Thoughts: Render thoughts or emphasis in italics, as if whispered to the soul.
+            5. Idioms & Proverbs: Translate with a fitting English equivalent, then add the original in pinyin in parentheses. (e.g., "A drop in the ocean (沧海一粟 – cāng hǎi yī sù)")
+            6. Slang & Internet Speak: Keep Chinese slang/acronyms, explaining them in whimsical, numbered footnotes.
+            7. Wordplay: Reimagine puns and wordplay in English. If impossible, explain the magic in a footnote.
+            8. Honorifics: Preserve all honorifics, prefixes, and suffixes—let the social dance remain.
+
+            Formatting:
+            - Keep paragraph breaks and pacing as in the original.
+            - No Chinese characters in the main text (pinyin is welcome).
+            - Numbered footnotes at the end for cultural notes, slang, or untranslatable wordplay.
+
+            Quality Checklist:
+            - English that flows like a river—never stilted, never awkward.            
+            - Translation should flow like a novel that exhilarates its reader, add pinch of creativity
+            - No content lost, no content invented.
+            - Consistent names and terminology.
+            - Formatting rules above are sacred.
+
+            Output ONLY the translated story and footnotes. No commentary, no explanations—let the art speak for itself.`;
+
 
             // --- INITIALIZATION ---
             if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
