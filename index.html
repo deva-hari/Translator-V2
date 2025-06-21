@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -38,13 +39,21 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .tab-active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .tab-inactive {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+        /* Styles for collapsible prompt */
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
     </style>
-    <!-- 
-      ENVIRONMENT VARIABLE FOR API KEY:
-      To deploy this on a service like Cloudflare Pages, you can replace the empty string below 
-      with your actual Gemini API key. If a key is provided here, the input field on the page 
-      will be hidden, and this key will be used for all requests.
-    -->
     <script>
         window.GEMINI_API_KEY = ""; 
     </script>
@@ -68,10 +77,10 @@
 
     <!-- Main Content -->
     <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+        <div class="flex flex-col space-y-6">
 
-            <!-- Input Section -->
-            <div class="flex flex-col space-y-4">
+            <!-- Settings Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div id="apiKeyContainer" class="bg-gray-800 p-4 rounded-lg border border-gray-700">
                     <label for="apiKey" class="block text-sm font-medium text-gray-400 mb-2">Your Gemini API Key</label>
                     <div class="relative">
@@ -80,40 +89,76 @@
                            <i class="fas fa-eye"></i>
                         </button>
                     </div>
-                     <p class="text-xs text-gray-500 mt-2">Your API key is stored only in your browser and used to call the Gemini API directly.</p>
                 </div>
-
                 <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
                     <label for="modelSelector" class="block text-sm font-medium text-gray-400 mb-2">Choose a Model</label>
                     <select id="modelSelector" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Efficient)</option>
                         <option value="gemini-2.5-flash">Gemini 2.5 (Higher Quality)</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-2">Gemini API free tier offers 1000 requests per day.</p>
+                    <p class="text-xs text-gray-500 mt-2">Free tier offers 60 requests per minute. Batch translation includes a 1s delay per file.</p>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                <div class="mb-4 border-b border-gray-700">
+                    <nav class="flex space-x-2" aria-label="Tabs">
+                        <button id="tab-text" class="tab-active px-4 py-2 text-sm font-medium rounded-t-md">Text / Single File</button>
+                        <button id="tab-batch" class="tab-inactive px-4 py-2 text-sm font-medium rounded-t-md">Multiple Files (Batch)</button>
+                    </nav>
+                </div>
+                
+                 <!-- Collapsible Prompt Section -->
+                <div class="mb-4">
+                    <button id="prompt-toggle" class="w-full flex justify-between items-center text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md">
+                        <span class="font-medium text-gray-200">Customize Translation Prompt</span>
+                        <i id="prompt-chevron" class="fas fa-chevron-down transition-transform"></i>
+                    </button>
+                    <div id="prompt-content" class="collapsible-content">
+                        <textarea id="promptText" class="w-full h-48 mt-2 bg-gray-900 p-3 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar"></textarea>
+                    </div>
                 </div>
 
 
-                <div class="flex-grow flex flex-col bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                    <div class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
-                        <h2 class="font-semibold text-lg">Original Text (Chinese)</h2>
-                        <div class="flex items-center space-x-2">
-                             <button id="uploadBtn" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
-                                <i class="fas fa-upload"></i>
-                                <span>Upload .txt</span>
-                            </button>
-                            <input type="file" id="fileInput" class="hidden" accept=".txt">
-                            <button id="clearBtn" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">Clear</button>
-                        </div>
+                <!-- Text / Single File Input -->
+                <div id="panel-text">
+                    <textarea id="inputText" class="w-full h-48 bg-gray-900 p-4 text-gray-300 resize-none focus:outline-none rounded-md custom-scrollbar" placeholder="Paste your Chinese novel text here, or upload a single .txt file..."></textarea>
+                    <div class="flex justify-between items-center mt-3">
+                         <label for="singleFileInput" class="cursor-pointer px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
+                            <i class="fas fa-upload"></i>
+                            <span>Upload Single .txt</span>
+                        </label>
+                        <input type="file" id="singleFileInput" class="hidden" accept=".txt">
+                        <button id="clearBtn" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors">Clear</button>
                     </div>
-                    <textarea id="inputText" class="w-full h-full flex-grow bg-gray-900 p-4 text-gray-300 resize-none focus:outline-none custom-scrollbar" placeholder="Paste your Chinese novel text here..."></textarea>
+                </div>
+
+                <!-- Multiple File Input -->
+                <div id="panel-batch" class="hidden">
+                    <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10">
+                        <i class="fas fa-folder-open text-4xl text-gray-500 mb-4"></i>
+                        <label for="multiFileInput" class="relative cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
+                            <span>Select Files</span>
+                            <input id="multiFileInput" type="file" multiple class="sr-only" accept=".txt">
+                        </label>
+                        <p class="mt-2 text-sm text-gray-500" id="file-list-info">Select multiple .txt files to translate and zip.</p>
+                    </div>
+                </div>
+                 <!-- Translate Action Button -->
+                <div class="mt-6 flex justify-center">
+                    <button id="translateBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center space-x-3">
+                        <i class="fas fa-language text-2xl"></i>
+                        <span id="translateBtnText">Translate Now</span>
+                    </button>
                 </div>
             </div>
 
             <!-- Output Section -->
-            <div class="flex flex-col bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div id="outputContainer" class="bg-gray-800 rounded-lg border border-gray-700 min-h-[300px] flex flex-col overflow-hidden">
                 <div class="flex items-center justify-between p-3 border-b border-gray-700 bg-gray-800">
-                    <h2 class="font-semibold text-lg">Translated Text (English)</h2>
-                    <div class="flex items-center space-x-2">
+                    <h2 id="outputTitle" class="font-semibold text-lg">Translated Text</h2>
+                    <div id="outputActions" class="flex items-center space-x-2">
                         <button id="copyBtn" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
                             <i class="fas fa-copy"></i>
                             <span id="copyBtnText">Copy</span>
@@ -122,157 +167,320 @@
                             <i class="fas fa-download"></i>
                             <span>.md</span>
                         </button>
-                         <button id="downloadTxtBtn" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-2" disabled>
-                            <i class="fas fa-download"></i>
-                            <span>.txt</span>
-                        </button>
                     </div>
                 </div>
-                <div id="outputText" class="w-full h-full flex-grow bg-gray-900 p-4 text-gray-300 overflow-y-auto custom-scrollbar prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
+                <div id="outputText" class="w-full h-full flex-grow bg-gray-900 p-6 text-gray-300 overflow-y-auto custom-scrollbar prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">
                      <div id="placeholder" class="flex flex-col items-center justify-center h-full text-gray-500">
                         <i class="fas fa-magic text-4xl mb-4"></i>
                         <p class="text-center">Your translated text will appear here.</p>
                     </div>
                     <div id="loadingIndicator" class="hidden flex-col items-center justify-center h-full text-gray-400">
                         <div class="loader"></div>
-                        <p class="mt-4 text-center">Translating with AI... this may take a moment.</p>
+                        <p id="loadingText" class="mt-4 text-center">Translating with AI... this may take a moment.</p>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Action Button -->
-        <div class="mt-6 flex justify-center">
-            <button id="translateBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-500/20 flex items-center space-x-3">
-                <i class="fas fa-language text-2xl"></i>
-                <span>Translate Now</span>
-            </button>
-        </div>
         
          <!-- Message Box -->
-        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse">
+        <div id="messageBox" class="hidden fixed bottom-5 right-5 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
             <p id="messageText"></p>
         </div>
-
     </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Element references
-            const apiKeyContainer = document.getElementById('apiKeyContainer');
-            const apiKeyInput = document.getElementById('apiKey');
-            const toggleApiVisibilityBtn = document.getElementById('toggleApiVisibility');
-            const modelSelector = document.getElementById('modelSelector');
-            const inputText = document.getElementById('inputText');
-            const outputText = document.getElementById('outputText');
-            const translateBtn = document.getElementById('translateBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const fileInput = document.getElementById('fileInput');
-            const copyBtn = document.getElementById('copyBtn');
-            const copyBtnText = document.getElementById('copyBtnText');
-            const downloadMdBtn = document.getElementById('downloadMdBtn');
-            const downloadTxtBtn = document.getElementById('downloadTxtBtn');
-            const placeholder = document.getElementById('placeholder');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const messageBox = document.getElementById('messageBox');
-            const messageText = document.getElementById('messageText');
-
+            // --- GLOBAL STATE ---
+            let currentMode = 'text'; // 'text' or 'batch'
             let translatedContent = '';
+            let filesToProcess = [];
+            const defaultPrompt = `You are an expert literary translator specializing in Chinese-to-English translation with deep cultural understanding, creative flair, and mastery of language. Your task is to translate the following Chinese novel chapter into polished, natural English, preserving cultural authenticity, emotional nuance, and literary style. This should read like a native English literary work that amazes readers and earns praise.
+Your language should be:
+- Smooth, emotionally rich, and well-paced
+- Easy to understand for common English readers
+- Not overly simplistic or childish—keep a refined tone.
+Translation Guidelines:
+1. Maintain original tone, style, rhythm, and emotional depth.
+2. Preserve paragraph structure and pacing.
+3. Keep proper names and places in pinyin.
+4. Translate idioms and proverbs as follows: Use an English equivalent, then include the original Chinese in pinyin.
+5. Preserve Chinese internet slang and acronyms, explaining them in footnotes.
+6. Maintain honorifics, prefixes, and suffixes.
+7. Preserve wordplay and puns, reconstructing in English or explaining in footnotes.
+8. For cultural concepts, keep the Chinese term in pinyin and briefly explain in parentheses on first use.
+Formatting Requirements:
+1. Preserve paragraph spacing.
+2. Format dialogue using quotation marks.
+3. Use *italics* for internal thoughts or emphasis.
+4. Add numbered footnotes at the end for cultural context, slang, or idioms.
+Quality Checklist (Mandatory):
+- Smooth, natural English flow.
+- No content lost or added.
+- Character names and terms consistent.
+- No chinese characters; everything should be translated into English along with pinyin where necessary.
+- Follow formatting requirements meticulously.
+Your translation should be beautiful, authentic, accessible, and faithful. Output only the translated text and footnotes. Do not explain your process.`;
 
-            // --- API KEY HANDLING ---
+
+            // --- ELEMENT REFERENCES ---
+            const elements = {
+                apiKeyContainer: document.getElementById('apiKeyContainer'),
+                apiKeyInput: document.getElementById('apiKey'),
+                toggleApiVisibilityBtn: document.getElementById('toggleApiVisibility'),
+                modelSelector: document.getElementById('modelSelector'),
+                inputText: document.getElementById('inputText'),
+                outputText: document.getElementById('outputText'),
+                outputContainer: document.getElementById('outputContainer'),
+                outputTitle: document.getElementById('outputTitle'),
+                outputActions: document.getElementById('outputActions'),
+                translateBtn: document.getElementById('translateBtn'),
+                translateBtnText: document.getElementById('translateBtnText'),
+                clearBtn: document.getElementById('clearBtn'),
+                singleFileInput: document.getElementById('singleFileInput'),
+                multiFileInput: document.getElementById('multiFileInput'),
+                fileListInfo: document.getElementById('file-list-info'),
+                copyBtn: document.getElementById('copyBtn'),
+                copyBtnText: document.getElementById('copyBtnText'),
+                downloadMdBtn: document.getElementById('downloadMdBtn'),
+                placeholder: document.getElementById('placeholder'),
+                loadingIndicator: document.getElementById('loadingIndicator'),
+                loadingText: document.getElementById('loadingText'),
+                messageBox: document.getElementById('messageBox'),
+                messageText: document.getElementById('messageText'),
+                tabText: document.getElementById('tab-text'),
+                tabBatch: document.getElementById('tab-batch'),
+                panelText: document.getElementById('panel-text'),
+                panelBatch: document.getElementById('panel-batch'),
+                promptToggle: document.getElementById('prompt-toggle'),
+                promptContent: document.getElementById('prompt-content'),
+                promptChevron: document.getElementById('prompt-chevron'),
+                promptText: document.getElementById('promptText'),
+            };
+
+            // --- INITIALIZATION ---
             if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
-                apiKeyContainer.style.display = 'none';
+                elements.apiKeyContainer.style.display = 'none';
             } else {
-                apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
-                apiKeyInput.addEventListener('input', () => {
-                    localStorage.setItem('geminiApiKey', apiKeyInput.value);
+                elements.apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+                elements.apiKeyInput.addEventListener('input', () => {
+                    localStorage.setItem('geminiApiKey', elements.apiKeyInput.value);
                 });
             }
+            elements.promptText.value = defaultPrompt;
 
-            // --- UI EVENT LISTENERS ---
-            toggleApiVisibilityBtn.addEventListener('click', () => {
-                const icon = toggleApiVisibilityBtn.querySelector('i');
-                if (apiKeyInput.type === 'password') {
-                    apiKeyInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
+            // --- EVENT LISTENERS ---
+            elements.toggleApiVisibilityBtn.addEventListener('click', toggleApiVisibility);
+            elements.promptToggle.addEventListener('click', togglePromptVisibility);
+            elements.clearBtn.addEventListener('click', () => { elements.inputText.value = ''; });
+            elements.singleFileInput.addEventListener('change', handleSingleFile);
+            elements.multiFileInput.addEventListener('change', handleMultiFile);
+            elements.translateBtn.addEventListener('click', handlePrimaryAction);
+            elements.copyBtn.addEventListener('click', copyOutput);
+            elements.downloadMdBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.md', 'text/markdown'));
+            elements.tabText.addEventListener('click', () => switchMode('text'));
+            elements.tabBatch.addEventListener('click', () => switchMode('batch'));
+
+            // --- UI FUNCTIONS ---
+            function togglePromptVisibility() {
+                const content = elements.promptContent;
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                    elements.promptChevron.classList.remove('rotate-180');
                 } else {
-                    apiKeyInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    elements.promptChevron.classList.add('rotate-180');
                 }
-            });
+            }
 
-            clearBtn.addEventListener('click', () => {
-                inputText.value = '';
-            });
-
-            uploadBtn.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            fileInput.addEventListener('change', (event) => {
+            function switchMode(mode) {
+                currentMode = mode;
+                if (mode === 'text') {
+                    elements.tabText.classList.replace('tab-inactive', 'tab-active');
+                    elements.tabBatch.classList.replace('tab-active', 'tab-inactive');
+                    elements.panelText.style.display = 'block';
+                    elements.panelBatch.style.display = 'none';
+                    elements.outputContainer.style.display = 'flex';
+                    elements.translateBtnText.textContent = 'Translate Now';
+                } else { // batch mode
+                    elements.tabBatch.classList.replace('tab-inactive', 'tab-active');
+                    elements.tabText.classList.replace('tab-active', 'tab-inactive');
+                    elements.panelBatch.style.display = 'block';
+                    elements.panelText.style.display = 'none';
+                    elements.outputContainer.style.display = 'none';
+                    elements.translateBtnText.textContent = 'Translate & Download ZIP';
+                }
+            }
+            
+            // --- FILE HANDLING ---
+            function handleSingleFile(event) {
                 const file = event.target.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        inputText.value = e.target.result;
-                    };
+                    reader.onload = (e) => { elements.inputText.value = e.target.result; };
                     reader.readAsText(file);
                 }
-            });
-
-            translateBtn.addEventListener('click', handleTranslation);
-
-            copyBtn.addEventListener('click', () => {
-                const textarea = document.createElement('textarea');
-                textarea.value = translatedContent;
-                document.body.appendChild(textarea);
-                textarea.select();
-                try {
-                    document.execCommand('copy');
-                    copyBtnText.textContent = 'Copied!';
-                    setTimeout(() => { copyBtnText.textContent = 'Copy'; }, 2000);
-                } catch (err) {
-                    showMessage('Failed to copy text.');
-                }
-                document.body.removeChild(textarea);
-            });
-            
-            downloadMdBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.md', 'text/markdown'));
-            downloadTxtBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.txt', 'text/plain'));
-
-
-            // --- CORE FUNCTIONS ---
-            function showMessage(message, duration = 3000) {
-                messageText.textContent = message;
-                messageBox.classList.remove('hidden');
-                setTimeout(() => {
-                    messageBox.classList.add('hidden');
-                }, duration);
             }
 
-            function setUIState(state) {
-                if (state === 'loading') {
-                    loadingIndicator.classList.remove('hidden');
-                    loadingIndicator.classList.add('flex');
-                    placeholder.classList.add('hidden');
-                    translateBtn.disabled = true;
-                    translateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    outputText.innerHTML = '';
-                    outputText.appendChild(loadingIndicator);
-                } else { // idle state
-                    loadingIndicator.classList.add('hidden');
-                    loadingIndicator.classList.remove('flex');
-                    translateBtn.disabled = false;
-                    translateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            function handleMultiFile(event) {
+                filesToProcess = Array.from(event.target.files);
+                if (filesToProcess.length > 0) {
+                    elements.fileListInfo.textContent = `${filesToProcess.length} file(s) selected.`;
+                } else {
+                    elements.fileListInfo.textContent = 'Select multiple .txt files to translate and zip.';
+                }
+            }
+
+            // --- PRIMARY ACTION HANDLER ---
+            function handlePrimaryAction() {
+                if (currentMode === 'text') {
+                    runSingleTranslation();
+                } else {
+                    runBatchTranslation();
+                }
+            }
+            
+            // --- TRANSLATION LOGIC ---
+            async function runSingleTranslation() {
+                const textToTranslate = elements.inputText.value.trim();
+                if (!textToTranslate) {
+                    showMessage('Please enter text or upload a file to translate.');
+                    return;
+                }
+                
+                setUIState('loading', 'Translating with AI...');
+                translatedContent = '';
+                
+                try {
+                    const result = await getTranslation(textToTranslate);
+                    translatedContent = result;
+                    let htmlContent = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+                    elements.outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
+                } catch (error) {
+                    handleError(error);
+                } finally {
+                    setUIState('idle');
+                }
+            }
+
+            async function runBatchTranslation() {
+                if (filesToProcess.length === 0) {
+                    showMessage('Please select files for batch translation.');
+                    return;
+                }
+                
+                switchMode('text'); // Switch back to show progress
+                setUIState('loading', `Starting batch translation...`);
+                
+                const zip = new JSZip();
+                let successCount = 0;
+
+                for (let i = 0; i < filesToProcess.length; i++) {
+                    const file = filesToProcess[i];
+                    setUIState('loading', `Translating file ${i + 1} of ${filesToProcess.length}: ${file.name}`);
+                    
+                    try {
+                        const fileContent = await file.text();
+                        const translatedText = await getTranslation(fileContent);
+                        
+                        const translatedFileName = file.name.replace('.txt', '_translated.txt');
+                        zip.file(translatedFileName, translatedText);
+                        successCount++;
+                        
+                        if (i < filesToProcess.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    } catch (error) {
+                         showMessage(`Failed to translate ${file.name}: ${error.message}. Skipping.`);
+                    }
                 }
 
+                if (successCount > 0) {
+                    setUIState('loading', 'Zipping files...');
+                    zip.generateAsync({ type: "blob" })
+                        .then(function(content) {
+                            downloadFile(content, "translated_files.zip", "application/zip");
+                        });
+                } else {
+                    showMessage('Batch translation failed. No files were processed.');
+                }
+                
+                handleError(); // Resets UI to placeholder state
+                filesToProcess = []; // Clear file list
+                elements.fileListInfo.textContent = 'Select multiple .txt files to translate and zip.';
+            }
+
+            async function getTranslation(text) {
+                let apiKey = (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) ? window.GEMINI_API_KEY : elements.apiKeyInput.value.trim();
+                if (!apiKey) {
+                    throw new Error('Please provide a Gemini API key.');
+                }
+
+                const selectedModel = elements.modelSelector.value;
+                const literaryPrompt = elements.promptText.value;
+                const fullPrompt = `${literaryPrompt}\n\nTranslate the following text:\n\n---\n\n${text}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: fullPrompt }] }],
+                        generationConfig: { temperature: 0.7, topK: 1, topP: 1, maxOutputTokens: 8192 },
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error ? errorData.error.message : 'API request failed');
+                }
+
+                const data = await response.json();
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    return data.candidates[0].content.parts[0].text;
+                } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    throw new Error(`Translation blocked. Reason: ${data.promptFeedback.blockReason}`);
+                } else {
+                    throw new Error('Received an empty response from the API.');
+                }
+            }
+
+
+            // --- UTILITY FUNCTIONS ---
+            function showMessage(message, duration = 4000) {
+                elements.messageText.textContent = message;
+                elements.messageBox.classList.remove('hidden');
+                setTimeout(() => { elements.messageBox.classList.add('hidden'); }, duration);
+            }
+
+            function setUIState(state, loadingMsg = '') {
+                if (state === 'loading') {
+                    elements.loadingIndicator.classList.remove('hidden');
+                    elements.loadingIndicator.classList.add('flex');
+                    elements.placeholder.classList.add('hidden');
+                    elements.loadingText.textContent = loadingMsg;
+                    elements.translateBtn.disabled = true;
+                    elements.translateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    elements.outputText.innerHTML = ''; // Clear previous content
+                    elements.outputText.appendChild(elements.loadingIndicator);
+                } else { // idle state
+                    elements.loadingIndicator.classList.add('hidden');
+                    elements.translateBtn.disabled = false;
+                    elements.translateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
                 const hasContent = translatedContent.length > 0;
-                copyBtn.disabled = !hasContent;
-                downloadMdBtn.disabled = !hasContent;
-                downloadTxtBtn.disabled = !hasContent;
+                elements.copyBtn.disabled = !hasContent;
+                elements.downloadMdBtn.disabled = !hasContent;
+            }
+
+            function handleError(error) {
+                if (error) {
+                    console.error('Translation Error:', error);
+                    showMessage(`Error: ${error.message}`);
+                }
+                setUIState('idle');
+                elements.outputText.innerHTML = '';
+                elements.outputText.appendChild(elements.placeholder);
+                elements.placeholder.classList.remove('hidden');
             }
 
             function downloadFile(content, fileName, contentType) {
@@ -283,145 +491,33 @@
                 a.click();
                 URL.revokeObjectURL(a.href);
             }
-
-            async function handleTranslation() {
-                let apiKey = '';
-                if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
-                    apiKey = window.GEMINI_API_KEY;
+            
+            function toggleApiVisibility() {
+                const icon = elements.toggleApiVisibilityBtn.querySelector('i');
+                if (elements.apiKeyInput.type === 'password') {
+                    elements.apiKeyInput.type = 'text';
+                    icon.classList.replace('fa-eye', 'fa-eye-slash');
                 } else {
-                    apiKey = apiKeyInput.value.trim();
-                }
-
-                const textToTranslate = inputText.value.trim();
-                const selectedModel = modelSelector.value;
-
-                if (!apiKey) {
-                    showMessage('Please provide a Gemini API key.');
-                    return;
-                }
-                if (!textToTranslate) {
-                    showMessage('Please enter some text to translate.');
-                    return;
-                }
-
-                setUIState('loading');
-                translatedContent = '';
-                
-                const literaryPrompt = `You are an expert literary translator specializing in Chinese-to-English translation with deep cultural understanding, creative flair, and mastery of language. Your task is to translate the following Chinese novel chapter into polished, natural English, preserving cultural authenticity, emotional nuance, and literary style. This should read like a native English literary work that amazes readers and earns praise.
-
-Your language should be:
-- Smooth, emotionally rich, and well-paced
-- Easy to understand for common English readers, including non-native speakers
-- Not overly simplistic or childish—keep a refined tone, but avoid using obscure or overly advanced vocabulary
-- Appropriate for an international audience who enjoys translated fiction
-
-Translation Guidelines:
-1. Maintain original tone, style, rhythm, and emotional depth.
-2. Preserve paragraph structure and pacing.
-3. Keep proper names and places in pinyin (e.g., "Li Wei", "Beijing").
-4. Translate idioms and proverbs as follows:
-- Use an English equivalent
-- Then include the original Chinese in pinyin (e.g., "A single spark can start a prairie fire (Xīngxīng zhī huǒ, kěyǐ liáoyuán)").
-5. Preserve Chinese internet slang and acronyms:
-- Common terms: "yyds" (永远的神), "awsl" (啊我死了), "xswl" (笑死我了), "zqsg" (真情实感), "tql" (太强了), "nb" (牛逼), "gg" (good game), "666", "carry", "AFK", "rush", "gank", "noob"
-- Retain original slang, explain in footnotes.
-6. Maintain honorifics, prefixes, and suffixes:
-- Prefixes: "Lao", "Xiao", "Da", "A"
-- Suffixes: "er", "zi", "tou", "wa"
-- Common honorifics: "Shifu", "Daozhang", "Xiansheng"
-- Family titles: "Gege", "Jiejie", "Shixiong", "Shimei"
-- Xianxia/Wuxia ranks/titles: "Zongzhu", "Zhangmen", "Zhanglao", "Dizi", "Nei Men Dizi", "Wai Men Dizi", "Xianzun", "Zhenjun", "Shangxian", "Daozu", "Shishu", "Shibo", "Shizu"
-7. Preserve wordplay and puns:
-- Retain original phrasing when possible
-- Reconstruct in English or explain in footnotes
-8. For cultural concepts:
-- Keep the Chinese term in pinyin
-- Briefly explain in parentheses on first use
-- Add a footnote if relevant
-
-Formatting Requirements:
-1. Preserve paragraph spacing with one blank line between paragraphs.
-2. Format dialogue using quotation marks.
-3. Use *italics* for:
-- Internal thoughts
-- Emphasis
-- Spiritual transmissions (if used)
-4. Add footnotes at the end (up to 10) for:
-- Cultural/historical context
-- Internet slang explanations
-- Idioms and literary references
-- Wordplay or puns
-
-Footnotes Format:
-Numbered footnotes at the end of the translation. Examples:
-1. yyds (永远的神): “Eternal god”; used to refer to someone as the GOAT (Greatest of All Time).
-2. nb (牛逼): Vulgar slang meaning “badass” or extremely powerful.
-
-Quality Checklist (Mandatory):
-- Smooth, natural English that flows well and respects original tone
-- No content lost or added
-- Emotion and style faithfully preserved
-- Character names and terms consistent
-- No chinese characters; everything should be translated into English along with pinyin where necessary
-- Strictly check the footnotes for accuracy and relevance.
-- Follow the formatting requirements meticulously.
-
-Your translation should be beautiful, authentic, accessible, and faithful. Output only the translated text and footnotes. Do not explain your process.`;
-                
-                const fullPrompt = `${literaryPrompt}\n\nTranslate the following text:\n\n---\n\n${textToTranslate}`;
-
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: fullPrompt }] }],
-                            generationConfig: {
-                                temperature: 0.7,
-                                topK: 1,
-                                topP: 1,
-                                maxOutputTokens: 8192,
-                            },
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error ? errorData.error.message : 'API request failed');
-                    }
-
-                    const data = await response.json();
-                    
-                    if (data.candidates && data.candidates[0].content.parts[0].text) {
-                        translatedContent = data.candidates[0].content.parts[0].text;
-                        let htmlContent = translatedContent
-                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                            .replace(/\n/g, '<br>');
-                        
-                        outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
-
-                    } else if (data.promptFeedback && data.promptFeedback.blockReason) {
-                         throw new Error(`Translation blocked by safety settings. Reason: ${data.promptFeedback.blockReason}`);
-                    } else {
-                        throw new Error('Received an empty response from the API.');
-                    }
-
-                } catch (error) {
-                    console.error('Translation Error:', error);
-                    showMessage(`Error: ${error.message}`);
-                    outputText.innerHTML = '';
-                    outputText.appendChild(placeholder);
-                    placeholder.classList.remove('hidden');
-
-                } finally {
-                    setUIState('idle');
+                    elements.apiKeyInput.type = 'password';
+                    icon.classList.replace('fa-eye-slash', 'fa-eye');
                 }
             }
+
+            function copyOutput() {
+                const textarea = document.createElement('textarea');
+                textarea.value = translatedContent;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    elements.copyBtnText.textContent = 'Copied!';
+                    setTimeout(() => { elements.copyBtnText.textContent = 'Copy'; }, 2000);
+                } catch (err) {
+                    showMessage('Failed to copy text.');
+                }
+                document.body.removeChild(textarea);
+            }
+
         });
     </script>
 
