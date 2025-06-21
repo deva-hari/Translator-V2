@@ -242,6 +242,30 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Translation History Panel -->
+                <div id="historyPanel" class="fixed bottom-5 left-5 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 w-80 max-h-96 overflow-y-auto hidden">
+                    <div class="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                        <span class="font-semibold text-white">Translation History</span>
+                        <button id="closeHistoryBtn" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                    </div>
+                    <ul id="historyList" class="divide-y divide-gray-700"></ul>
+                </div>
+                <button id="showHistoryBtn" class="fixed bottom-5 left-5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center space-x-2">
+                    <i class="fas fa-history"></i><span>History</span>
+                </button>
+
+                <!-- Word/Character Count Display -->
+                <div class="flex justify-between text-xs text-gray-400 mt-2">
+                    <span id="inputCount">Input: 0 words, 0 chars</span>
+                    <span id="outputCount">Output: 0 words, 0 chars</span>
+                </div>
+
+                <!-- API Usage Stats -->
+                <div id="apiStats" class="fixed top-5 right-5 bg-gray-800 border border-gray-700 text-gray-200 px-4 py-2 rounded-lg shadow z-50 text-xs flex items-center space-x-2">
+                    <i class="fas fa-signal"></i>
+                    <span id="apiStatsText">Requests: 0</span>
+                </div>
             </div>
 
             <!-- Message Box -->
@@ -322,6 +346,14 @@
                 promptContent: document.getElementById('prompt-content'),
                 promptChevron: document.getElementById('prompt-chevron'),
                 promptText: document.getElementById('promptText'),
+                showHistoryBtn: document.getElementById('showHistoryBtn'),
+                historyPanel: document.getElementById('historyPanel'),
+                historyList: document.getElementById('historyList'),
+                closeHistoryBtn: document.getElementById('closeHistoryBtn'),
+                inputCount: document.getElementById('inputCount'),
+                outputCount: document.getElementById('outputCount'),
+                apiStats: document.getElementById('apiStats'),
+                apiStatsText: document.getElementById('apiStatsText'),
             };
 
             // --- INITIALIZATION ---
@@ -346,6 +378,15 @@
             elements.downloadMdBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.md', 'text/markdown'));
             elements.tabText.addEventListener('click', () => switchMode('text'));
             elements.tabBatch.addEventListener('click', () => switchMode('batch'));
+            elements.showHistoryBtn.addEventListener('click', () => {
+                elements.historyPanel.classList.remove('hidden');
+            });
+            elements.closeHistoryBtn.addEventListener('click', () => {
+                elements.historyPanel.classList.add('hidden');
+            });
+            elements.inputText.addEventListener('input', () => {
+                updateCounts();
+            });
 
             // --- UI FUNCTIONS ---
             function togglePromptVisibility() {
@@ -424,7 +465,19 @@
                     let htmlContent = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
                     elements.outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                    showMessage(`🎉 Translation finished in ${elapsed} seconds!`, 5000);
+                    showMessage(`🎉 Translation finished in ${elapsed} seconds!`, 3000);
+
+                    // Save to history
+                    const now = new Date();
+                    translationHistory.push({
+                        input: textToTranslate,
+                        output: result,
+                        time: now.toLocaleTimeString()
+                    });
+                    if (translationHistory.length > 20) translationHistory.shift();
+                    localStorage.setItem('translationHistory', JSON.stringify(translationHistory));
+                    updateHistoryPanel();
+                    updateCounts();
                 } catch (error) {
                     handleError(error);
                 } finally {
@@ -449,12 +502,27 @@
                     setUIState('loading', `Translating file ${i + 1} of ${filesToProcess.length}: ${file.name}`);
 
                     try {
+                        apiRequestCount++;
+                        localStorage.setItem('apiRequestCount', apiRequestCount);
+                        updateApiStats();
+
                         const fileContent = await file.text();
                         const translatedText = await getTranslation(fileContent);
 
                         const translatedFileName = file.name.replace('.txt', '_translated.txt');
                         zip.file(translatedFileName, translatedText);
                         successCount++;
+
+                        // Save to history
+                        const now = new Date();
+                        translationHistory.push({
+                            input: fileContent,
+                            output: translatedText,
+                            time: now.toLocaleTimeString()
+                        });
+                        if (translationHistory.length > 20) translationHistory.shift();
+                        localStorage.setItem('translationHistory', JSON.stringify(translationHistory));
+                        updateHistoryPanel();
 
                         if (i < filesToProcess.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -470,7 +538,7 @@
                         .then(function(content) {
                             downloadFile(content, "translated_files.zip", "application/zip");
                             const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                            showMessage(`🎉 Batch translation finished in ${elapsed} seconds!`, 6000);
+                            showMessage(`🎉 Batch translation finished in ${elapsed} seconds!`, 3000);
                         });
                 } else {
                     showMessage('Batch translation failed. No files were processed.');
@@ -479,6 +547,7 @@
                 handleError(); // Resets UI to placeholder state
                 filesToProcess = []; // Clear file list
                 elements.fileListInfo.textContent = 'Select multiple .txt files to translate and zip.';
+                updateCounts();
             }
 
             async function getTranslation(text) {
@@ -593,6 +662,208 @@
                 document.body.removeChild(textarea);
             }
 
+            // --- HISTORY, COUNTS, API STATS STATE ---
+            let translationHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
+            let apiRequestCount = Number(localStorage.getItem('apiRequestCount') || 0);
+
+            // --- HISTORY PANEL FUNCTIONS ---
+            function updateHistoryPanel() {
+                const list = elements.historyList;
+                list.innerHTML = '';
+                if (translationHistory.length === 0) {
+                    list.innerHTML = '<li class="p-4 text-gray-400 text-center">No history yet.</li>';
+                    return;
+                }
+                translationHistory.slice().reverse().forEach((item, idx) => {
+                    const li = document.createElement('li');
+                    li.className = "p-3 hover:bg-gray-700 transition";
+                    li.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-semibold text-sm text-blue-300">#${translationHistory.length - idx}</span>
+                            <span class="text-xs text-gray-400">${item.time}</span>
+                        </div>
+                        <div class="mb-2 max-h-16 overflow-y-auto text-gray-300 text-xs"><strong>Input:</strong> ${item.input.slice(0, 100)}${item.input.length > 100 ? '...' : ''}</div>
+                        <div class="mb-2 max-h-16 overflow-y-auto text-gray-300 text-xs"><strong>Output:</strong> ${item.output.slice(0, 100)}${item.output.length > 100 ? '...' : ''}</div>
+                        <div class="flex space-x-2">
+                            <button class="copyHistBtn bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs" data-idx="${translationHistory.length - 1 - idx}"><i class="fas fa-copy"></i> Copy</button>
+                            <button class="downloadHistBtn bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs" data-idx="${translationHistory.length - 1 - idx}"><i class="fas fa-download"></i> .md</button>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+                // Attach copy/download handlers
+                list.querySelectorAll('.copyHistBtn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        const idx = Number(btn.dataset.idx);
+                        const text = translationHistory[idx].output;
+                        navigator.clipboard.writeText(text);
+                        showMessage('Copied translation from history!');
+                    };
+                });
+                list.querySelectorAll('.downloadHistBtn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        const idx = Number(btn.dataset.idx);
+                        const text = translationHistory[idx].output;
+                        downloadFile(text, `translation_${idx + 1}.md`, 'text/markdown');
+                    };
+                });
+            }
+
+            // --- WORD/CHAR COUNT FUNCTIONS ---
+            function updateCounts() {
+                const input = elements.inputText.value;
+                const output = translatedContent || '';
+                elements.inputCount.textContent = `Input: ${countWords(input)} words, ${input.length} chars`;
+                elements.outputCount.textContent = `Output: ${countWords(output)} words, ${output.length} chars`;
+            }
+            function countWords(str) {
+                return str.trim() ? str.trim().split(/\s+/).length : 0;
+            }
+
+            // --- API USAGE STATS ---
+            function updateApiStats() {
+                elements.apiStatsText.textContent = `Requests: ${apiRequestCount}`;
+            }
+
+            // --- HOOK INTO TRANSLATION LOGIC ---
+            // Add to history after successful translation
+            async function runSingleTranslation() {
+                const textToTranslate = elements.inputText.value.trim();
+                if (!textToTranslate) {
+                    showMessage('Please enter text or upload a file to translate.');
+                    return;
+                }
+
+                setUIState('loading', 'Translating with AI...');
+                translatedContent = '';
+                const startTime = Date.now();
+
+                try {
+                    apiRequestCount++;
+                    localStorage.setItem('apiRequestCount', apiRequestCount);
+                    updateApiStats();
+
+                    const result = await getTranslation(textToTranslate);
+                    translatedContent = result;
+                    let htmlContent = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+                    elements.outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    showMessage(`🎉 Translation finished in ${elapsed} seconds!`, 3000);
+
+                    // Save to history
+                    const now = new Date();
+                    translationHistory.push({
+                        input: textToTranslate,
+                        output: result,
+                        time: now.toLocaleTimeString()
+                    });
+                    if (translationHistory.length > 20) translationHistory.shift();
+                    localStorage.setItem('translationHistory', JSON.stringify(translationHistory));
+                    updateHistoryPanel();
+                    updateCounts();
+                } catch (error) {
+                    handleError(error);
+                } finally {
+                    setUIState('idle');
+                }
+            }
+
+            async function runBatchTranslation() {
+                if (filesToProcess.length === 0) {
+                    showMessage('Please select files for batch translation.');
+                    return;
+                }
+
+                switchMode('text');
+                setUIState('loading', `Starting batch translation...`);
+                const zip = new JSZip();
+                let successCount = 0;
+                const startTime = Date.now();
+
+                for (let i = 0; i < filesToProcess.length; i++) {
+                    const file = filesToProcess[i];
+                    setUIState('loading', `Translating file ${i + 1} of ${filesToProcess.length}: ${file.name}`);
+
+                    try {
+                        apiRequestCount++;
+                        localStorage.setItem('apiRequestCount', apiRequestCount);
+                        updateApiStats();
+
+                        const fileContent = await file.text();
+                        const translatedText = await getTranslation(fileContent);
+
+                        const translatedFileName = file.name.replace('.txt', '_translated.txt');
+                        zip.file(translatedFileName, translatedText);
+                        successCount++;
+
+                        // Save to history
+                        const now = new Date();
+                        translationHistory.push({
+                            input: fileContent,
+                            output: translatedText,
+                            time: now.toLocaleTimeString()
+                        });
+                        if (translationHistory.length > 20) translationHistory.shift();
+                        localStorage.setItem('translationHistory', JSON.stringify(translationHistory));
+                        updateHistoryPanel();
+
+                        if (i < filesToProcess.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    } catch (error) {
+                        showMessage(`Failed to translate ${file.name}: ${error.message}. Skipping.`);
+                    }
+                }
+
+                if (successCount > 0) {
+                    setUIState('loading', 'Zipping files...');
+                    zip.generateAsync({ type: "blob" })
+                        .then(function(content) {
+                            downloadFile(content, "translated_files.zip", "application/zip");
+                            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                            showMessage(`🎉 Batch translation finished in ${elapsed} seconds!`, 3000);
+                        });
+                } else {
+                    showMessage('Batch translation failed. No files were processed.');
+                }
+
+                handleError();
+                filesToProcess = [];
+                elements.fileListInfo.textContent = 'Select multiple .txt files to translate and zip.';
+                updateCounts();
+            }
+
+            // --- EVENT LISTENERS FOR NEW FEATURES ---
+            elements.showHistoryBtn = document.getElementById('showHistoryBtn');
+            elements.historyPanel = document.getElementById('historyPanel');
+            elements.historyList = document.getElementById('historyList');
+            elements.closeHistoryBtn = document.getElementById('closeHistoryBtn');
+            elements.inputCount = document.getElementById('inputCount');
+            elements.outputCount = document.getElementById('outputCount');
+            elements.apiStats = document.getElementById('apiStats');
+            elements.apiStatsText = document.getElementById('apiStatsText');
+
+            elements.showHistoryBtn.addEventListener('click', () => {
+                elements.historyPanel.classList.remove('hidden');
+            });
+            elements.closeHistoryBtn.addEventListener('click', () => {
+                elements.historyPanel.classList.add('hidden');
+            });
+            elements.inputText.addEventListener('input', () => {
+                updateCounts();
+            });
+            updateCounts();
+            updateApiStats();
+            updateHistoryPanel();
+
+            // Update output count after translation
+            const origSetUIState = setUIState;
+            setUIState = function(state, loadingMsg = '') {
+                origSetUIState(state, loadingMsg);
+                updateCounts();
+            };
+
+            // ...existing code...
         });
     </script>
 
