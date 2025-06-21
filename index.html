@@ -348,15 +348,18 @@ Your translation should be beautiful, authentic, accessible, and faithful. Outpu
                     showMessage('Please enter text or upload a file to translate.');
                     return;
                 }
-                
+
                 setUIState('loading', 'Translating with AI...');
                 translatedContent = '';
-                
+                const startTime = Date.now(); // Start timer
+
                 try {
                     const result = await getTranslation(textToTranslate);
                     translatedContent = result;
                     let htmlContent = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
                     elements.outputText.innerHTML = `<div class="prose prose-invert max-w-none prose-p:my-2 prose-headings:my-3">${htmlContent}</div>`;
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    showMessage(`🎉 Translation finished in ${elapsed} seconds!`, 5000);
                 } catch (error) {
                     handleError(error);
                 } finally {
@@ -369,30 +372,30 @@ Your translation should be beautiful, authentic, accessible, and faithful. Outpu
                     showMessage('Please select files for batch translation.');
                     return;
                 }
-                
+
                 switchMode('text'); // Switch back to show progress
                 setUIState('loading', `Starting batch translation...`);
-                
                 const zip = new JSZip();
                 let successCount = 0;
+                const startTime = Date.now(); // Start timer
 
                 for (let i = 0; i < filesToProcess.length; i++) {
                     const file = filesToProcess[i];
                     setUIState('loading', `Translating file ${i + 1} of ${filesToProcess.length}: ${file.name}`);
-                    
+
                     try {
                         const fileContent = await file.text();
                         const translatedText = await getTranslation(fileContent);
-                        
+
                         const translatedFileName = file.name.replace('.txt', '_translated.txt');
                         zip.file(translatedFileName, translatedText);
                         successCount++;
-                        
+
                         if (i < filesToProcess.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 1000));
                         }
                     } catch (error) {
-                         showMessage(`Failed to translate ${file.name}: ${error.message}. Skipping.`);
+                        showMessage(`Failed to translate ${file.name}: ${error.message}. Skipping.`);
                     }
                 }
 
@@ -401,11 +404,13 @@ Your translation should be beautiful, authentic, accessible, and faithful. Outpu
                     zip.generateAsync({ type: "blob" })
                         .then(function(content) {
                             downloadFile(content, "translated_files.zip", "application/zip");
+                            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                            showMessage(`🎉 Batch translation finished in ${elapsed} seconds!`, 6000);
                         });
                 } else {
                     showMessage('Batch translation failed. No files were processed.');
                 }
-                
+
                 handleError(); // Resets UI to placeholder state
                 filesToProcess = []; // Clear file list
                 elements.fileListInfo.textContent = 'Select multiple .txt files to translate and zip.';
