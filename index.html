@@ -428,7 +428,14 @@
                 apiQuotaInfo: document.getElementById('apiQuotaInfo'),
             };
 
+            // --- GLOBAL STATE (ensure these are defined before use) ---
+            let translationHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
+            let apiRequestCount = Number(localStorage.getItem('apiRequestCount') || 0);
+
             // --- INITIALIZATION ---
+            updateHistoryPanel(); // Ensure history is displayed even before any new translation
+            updateApiStats();
+
             if (window.GEMINI_API_KEY && window.GEMINI_API_KEY.length > 0) {
                 elements.apiKeyContainer.style.display = 'none';
             } else {
@@ -438,10 +445,6 @@
                 });
             }
             elements.promptText.value = defaultPrompt;
-
-            // --- GLOBAL STATE (ensure these are defined before use) ---
-            let translationHistory = JSON.parse(localStorage.getItem('translationHistory') || '[]');
-            let apiRequestCount = Number(localStorage.getItem('apiRequestCount') || 0);
 
             // --- API USAGE STATS ---
             function updateApiStats() {
@@ -502,12 +505,60 @@
             elements.downloadMdBtn.addEventListener('click', () => downloadFile(translatedContent, 'translation.md', 'text/markdown'));
             elements.tabText.addEventListener('click', () => switchMode('text'));
             elements.tabBatch.addEventListener('click', () => switchMode('batch'));
-            elements.showHistoryBtn.addEventListener('click', () => {
-                elements.historyPanel.classList.remove('hidden');
+
+            // Toggle history panel on button click
+            let historyPanelVisible = false;
+            elements.showHistoryBtn.addEventListener('click', (e) => {
+                historyPanelVisible = !historyPanelVisible;
+                if (historyPanelVisible) {
+                    elements.historyPanel.classList.remove('hidden');
+                    elements.showHistoryBtn.classList.remove('opacity-30');
+                } else {
+                    elements.historyPanel.classList.add('hidden');
+                    elements.showHistoryBtn.classList.add('opacity-30');
+                }
+                e.stopPropagation();
             });
             elements.closeHistoryBtn.addEventListener('click', () => {
                 elements.historyPanel.classList.add('hidden');
+                elements.showHistoryBtn.classList.add('opacity-30');
+                historyPanelVisible = false;
             });
+
+            document.addEventListener('click', (e) => {
+                // If click is outside the history panel and button, hide the panel
+                if (historyPanelVisible) {
+                    const panel = elements.historyPanel;
+                    const btn = elements.showHistoryBtn;
+                    if (!panel.contains(e.target) && !btn.contains(e.target)) {
+                        panel.classList.add('hidden');
+                        btn.classList.add('opacity-30');
+                        historyPanelVisible = false;
+                    }
+                } else {
+                    // If not active, make button transparent
+                    elements.showHistoryBtn.classList.add('opacity-30');
+                }
+            });
+            // On load, make button transparent if panel is hidden
+            if (elements.historyPanel.classList.contains('hidden')) {
+                elements.showHistoryBtn.classList.add('opacity-30');
+            }
+            // Remove transparency on hover
+            // Add event listeners for mouseenter and mouseleave
+
+            // Only remove opacity if not active
+            // On mouseenter
+            elements.showHistoryBtn.addEventListener('mouseenter', () => {
+                elements.showHistoryBtn.classList.remove('opacity-30');
+            });
+            // On mouseleave, only add opacity if not active
+            elements.showHistoryBtn.addEventListener('mouseleave', () => {
+                if (!historyPanelVisible) {
+                    elements.showHistoryBtn.classList.add('opacity-30');
+                }
+            });
+
             elements.inputText.addEventListener('input', () => {
                 updateCounts();
             });
@@ -597,13 +648,13 @@
                     elements.placeholder.classList.add('hidden');
                     elements.loadingText.textContent = loadingMsg;
                     elements.translateBtn.disabled = true;
-                    elements.translateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    elements.translateBtn.classList.add('opacity-30', 'cursor-not-allowed');
                     elements.outputText.innerHTML = '';
                     elements.outputText.appendChild(elements.loadingIndicator);
                 } else { // idle state
                     elements.loadingIndicator.classList.add('hidden');
                     elements.translateBtn.disabled = false;
-                    elements.translateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    elements.translateBtn.classList.remove('opacity-30', 'cursor-not-allowed');
                 }
                 const hasContent = translatedContent.length > 0;
                 elements.copyBtn.disabled = !hasContent;
@@ -830,7 +881,11 @@
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
                     showMessage(`🎉 Translation finished in ${elapsed} seconds!`, 3000);
 
-                    // Save to history
+                    apiRequestCount++;
+localStorage.setItem('apiRequestCount', apiRequestCount);
+updateApiStats();
+
+// Save to history
                     const now = new Date();
                     translationHistory.push({
                         input: textToTranslate,
@@ -872,11 +927,15 @@
                         const fileContent = await file.text();
                         const translatedText = await getTranslation(fileContent);
 
-                        const translatedFileName = file.name.replace('.txt', '_translated.txt');
+                        const translatedFileName = file.name.replace(/\.txt$/i, '_translated.md');
                         zip.file(translatedFileName, translatedText);
                         successCount++;
 
-                        // Save to history
+                        apiRequestCount++;
+localStorage.setItem('apiRequestCount', apiRequestCount);
+updateApiStats();
+
+// Save to history
                         const now = new Date();
                         translationHistory.push({
                             input: fileContent,
