@@ -918,6 +918,7 @@ updateApiStats();
                 let successCount = 0;
                 const startTime = Date.now(); // Start timer
 
+
                 for (let i = 0; i < filesToProcess.length; i++) {
                     const file = filesToProcess[i];
                     setUIState('loading', `Translating file ${i + 1} of ${filesToProcess.length}: ${file.name}`);
@@ -928,17 +929,21 @@ updateApiStats();
                         updateApiStats();
 
                         const fileContent = await file.text();
-                        const translatedText = await getTranslation(fileContent);
+                        let translatedText = await getTranslation(fileContent);
+
+                        // Remove HTML formatting for .md output (keep as plain markdown)
+                        // If the model returns markdown, just save as is. If it returns HTML, convert to markdown.
+                        // Here, we assume the model returns markdown/plaintext, so just save as is.
 
                         const translatedFileName = file.name.replace(/\.txt$/i, '_translated.md');
                         zip.file(translatedFileName, translatedText);
                         successCount++;
 
                         apiRequestCount++;
-localStorage.setItem('apiRequestCount', apiRequestCount);
-updateApiStats();
+                        localStorage.setItem('apiRequestCount', apiRequestCount);
+                        updateApiStats();
 
-// Save to history
+                        // Save to history
                         const now = new Date();
                         translationHistory.push({
                             input: fileContent,
