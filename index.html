@@ -354,6 +354,9 @@
                     models: [
                         { value: 'llama3-70b-8192', label: 'Llama 3 70B (Best Quality, Free Tier)' },
                         { value: 'llama3-8b-8192', label: 'Llama 3 8B (Fastest, Free Tier)' },
+                        { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (Free Tier)' },
+                        { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (Free Tier)' },
+                        { value: 'gemma2-9b-it', label: 'Gemma 2 9B IT (Free Tier)' },
                         { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (Long Context, Free Tier)' },
                         { value: 'gemma-7b-it', label: 'Gemma 7B IT (Free Tier)' }
                     ],
@@ -373,8 +376,8 @@
                     apiKeyHelp: 'Get your API key at https://openrouter.ai/',
                     models: [
                         { value: 'deepseek/deepseek-chat-v3-0324:free', label: 'Deepseek Chat V3 (OpenRouter, Free Tier)' },
-                        { value: 'openrouter/llama-3-70b', label: 'Llama 3 70B (OpenRouter, Free Tier)' },
-                        { value: 'openrouter/mistral-7b', label: 'Mistral 7B (OpenRouter, Free Tier)' }
+                        { value: 'deepseek/deepseek-chat:free', label: 'Deepseek Chat (OpenRouter, Free Tier)' },
+                        { value: 'qwen/qwq-32b:free', label: 'Mistral 7B (OpenRouter, Free Tier)' }
                     ],
                     modelHelp: 'OpenRouter free tier: see https://openrouter.ai/pricing.'
                 }
@@ -1009,7 +1012,7 @@
                             { role: 'system', content: literaryPrompt },
                             { role: 'user', content: text }
                         ],
-                        max_tokens: 8192
+                        max_tokens: 8196
                     };
                     try {
                         const response = await fetch(apiUrl, {
