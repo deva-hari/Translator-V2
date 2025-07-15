@@ -867,6 +867,44 @@
                 URL.revokeObjectURL(a.href);
             }
 
+            // --- PROMPT PRESETS ---
+const promptPresets = {
+    literal: `Translate the Chinese text to English as literally and accurately as possible. Preserve sentence structure and meaning. No extra commentary.`,
+    creative: defaultPrompt,
+    just: `Translate the following Chinese text to English. No commentary, no extra formatting. Just translate.`
+};
+function setActivePreset(preset) {
+    document.querySelectorAll('.prompt-preset').forEach(btn => {
+        if (btn.dataset.preset === preset) {
+            btn.classList.add('bg-blue-600', 'text-white');
+            btn.classList.remove('bg-gray-700', 'text-gray-200');
+        } else {
+            btn.classList.remove('bg-blue-600', 'text-white');
+            btn.classList.add('bg-gray-700', 'text-gray-200');
+        }
+    });
+    localStorage.setItem('promptPreset', preset);
+}
+document.querySelectorAll('.prompt-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const preset = btn.dataset.preset;
+        elements.promptText.value = promptPresets[preset];
+        setActivePreset(preset);
+        // Save the prompt and preset
+        localStorage.setItem('prompt', elements.promptText.value);
+        localStorage.setItem('promptPreset', preset);
+    });
+});
+// On load, set preset button state
+const savedPreset = localStorage.getItem('promptPreset');
+if (savedPreset && promptPresets[savedPreset]) {
+    setActivePreset(savedPreset);
+    elements.promptText.value = promptPresets[savedPreset];
+} else {
+    setActivePreset('creative');
+}
+
+
             // --- TRANSLATION API FUNCTION ---
             async function getTranslation(text, retries = 2) {
                 const provider = providerSelector.value;
