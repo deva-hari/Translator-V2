@@ -132,12 +132,6 @@
                         <a href="https://d3va-extractor.streamlit.app/" target="_blank" class="text-gray-400 hover:text-white transition-colors flex items-center space-x-1 ml-2">
                             <i class="fas fa-file-code"></i><span class="hidden sm:inline">Extractor</span>
                         </a>
-                        <!-- Dark/Light Mode Toggle -->
-                        <div class="flex items-center space-x-2 ml-4">
-                            <button id="themeToggle" aria-label="Toggle dark/light mode" class="text-gray-400 hover:text-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition-colors">
-                                <i class="fas fa-moon"></i>
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -154,7 +148,6 @@
                         <select id="providerSelector" class="w-full bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             <option value="gemini">Gemini (Google AI Studio)</option>
                             <option value="groq">GroqCloud</option>
-                            <option value="chuttes">Chuttes AI</option>
                             <option value="openrouter">OpenRouter</option>
                         </select>
                     </div>
@@ -391,6 +384,7 @@
             const apiKeyHelp = document.getElementById('apiKeyHelp');
             const modelHelp = document.getElementById('modelHelp');
 
+            // --- FIX GEMINI MODEL SELECTION ON LOAD ---
             function updateProviderUI() {
                 const provider = providerSelector.value;
                 const info = PROVIDERS[provider];
@@ -406,9 +400,31 @@
                 });
                 // Update model help
                 modelHelp.textContent = info.modelHelp;
+                // Restore model selection if present
+                const savedModel = localStorage.getItem('model');
+                if (savedModel && Array.from(modelSelector.options).some(o => o.value === savedModel)) {
+                    modelSelector.value = savedModel;
+                } else if (modelSelector.options.length > 0) {
+                    modelSelector.selectedIndex = 0;
+                }
             }
             providerSelector.addEventListener('change', updateProviderUI);
             updateProviderUI();
+
+            // --- HIDE CHUTTES AI IN PROVIDER DROPDOWN ---
+            function updateProviderDropdown() {
+                providerSelector.innerHTML = '';
+                Object.entries(PROVIDERS).forEach(([key, info]) => {
+                    if (key === 'chuttes') return; // Hide Chuttes AI
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = info.name;
+                    providerSelector.appendChild(opt);
+                });
+            }
+            updateProviderDropdown();
+            providerSelector.addEventListener('change', updateProviderUI);
+
             // --- GLOBAL STATE ---
             let currentMode = 'text'; // 'text' or 'batch'
             let translatedContent = '';
@@ -546,7 +562,6 @@
                 outputCount: document.getElementById('outputCount'),
                 apiStats: document.getElementById('apiStats'),
                 apiStatsText: document.getElementById('apiStatsText'),
-                themeToggle: document.getElementById('themeToggle'),
                 apiQuotaInfo: document.getElementById('apiQuotaInfo'),
             };
 
@@ -711,7 +726,7 @@
                     showMessage('Translation history cleared!');
                 }
             });
-            elements.themeToggle.addEventListener('click', () => setTheme(theme === 'dark' ? 'light' : 'dark'));
+
 
             // --- UI FUNCTIONS ---
             function togglePromptVisibility() {
@@ -852,119 +867,6 @@
                 URL.revokeObjectURL(a.href);
             }
 
-            // --- THEME (DARK/LIGHT) ---
-            const themeToggle = document.getElementById('themeToggle');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            let theme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
-            setTheme(theme);
-            function setTheme(mode) {
-                theme = mode;
-                const html = document.documentElement;
-                if (mode === 'dark') {
-                    html.classList.add('dark');
-                } else {
-                    html.classList.remove('dark');
-                }
-                themeToggle.innerHTML = mode === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-                localStorage.setItem('theme', mode);
-            }
-            themeToggle.addEventListener('click', () => setTheme(theme === 'dark' ? 'light' : 'dark'));
-
-            // --- PROMPT PRESETS ---
-            const promptPresets = {
-                literal: `Translate the Chinese text to English as literally and accurately as possible. Preserve sentence structure and meaning. No extra commentary.`,
-                creative: defaultPrompt,
-                just: `Translate the following Chinese text to English. No commentary, no extra formatting. Just translate.`
-            };
-            function setActivePreset(preset) {
-                document.querySelectorAll('.prompt-preset').forEach(btn => {
-                    if (btn.dataset.preset === preset) {
-                        btn.classList.add('bg-blue-600', 'text-white');
-                        btn.classList.remove('bg-gray-700', 'text-gray-200');
-                    } else {
-                        btn.classList.remove('bg-blue-600', 'text-white');
-                        btn.classList.add('bg-gray-700', 'text-gray-200');
-                    }
-                });
-                localStorage.setItem('promptPreset', preset);
-            }
-            document.querySelectorAll('.prompt-preset').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const preset = btn.dataset.preset;
-                    elements.promptText.value = promptPresets[preset];
-                    setActivePreset(preset);
-                    saveSettings();
-                });
-            });
-            // On load, set preset button state
-            const savedPreset = localStorage.getItem('promptPreset');
-            if (savedPreset && promptPresets[savedPreset]) {
-                setActivePreset(savedPreset);
-                elements.promptText.value = promptPresets[savedPreset];
-            } else {
-                setActivePreset('creative');
-            }
-
-            // --- PERSISTENT SETTINGS ---
-            // Save/load model, prompt, theme, preset
-            function saveSettings() {
-                localStorage.setItem('model', elements.modelSelector.value);
-                localStorage.setItem('prompt', elements.promptText.value);
-                localStorage.setItem('theme', theme);
-            }
-            function loadSettings() {
-                const model = localStorage.getItem('model');
-                if (model) elements.modelSelector.value = model;
-                const prompt = localStorage.getItem('prompt');
-                if (prompt) elements.promptText.value = prompt;
-                setTheme(localStorage.getItem('theme') || theme);
-            }
-            elements.modelSelector.addEventListener('change', saveSettings);
-            elements.promptText.addEventListener('input', saveSettings);
-            window.addEventListener('DOMContentLoaded', loadSettings);
-
-            // --- DRAG-AND-DROP FILE UPLOAD ---
-            const inputTextArea = elements.inputText;
-            inputTextArea.addEventListener('dragover', e => {
-                e.preventDefault();
-                inputTextArea.classList.add('ring', 'ring-blue-500');
-            });
-            inputTextArea.addEventListener('dragleave', e => {
-                e.preventDefault();
-                inputTextArea.classList.remove('ring', 'ring-blue-500');
-            });
-            inputTextArea.addEventListener('drop', e => {
-                e.preventDefault();
-                inputTextArea.classList.remove('ring', 'ring-blue-500');
-                const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.txt'));
-                if (files.length === 0) {
-                    showMessage('Only .txt files are supported.');
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = (ev) => { inputTextArea.value = ev.target.result; updateCounts(); };
-                reader.readAsText(files[0]);
-            });
-            // Keyboard accessibility for drag-and-drop
-            inputTextArea.addEventListener('keydown', e => {
-                if ((e.key === 'Enter' || e.key === ' ') && e.ctrlKey) {
-                    elements.singleFileInput.click();
-                }
-            });
-
-            // Fix: after uploading file, pressing translate works (ensure inputText is updated)
-            elements.singleFileInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        elements.inputText.value = e.target.result;
-                        updateCounts();
-                    };
-                    reader.readAsText(file);
-                }
-            });
-
             // --- TRANSLATION API FUNCTION ---
             async function getTranslation(text, retries = 2) {
                 const provider = providerSelector.value;
@@ -1001,7 +903,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 contents: [{ parts: [{ text: fullPrompt }] }],
-                                generationConfig: { temperature: 0.7, topK: 1, topP: 1, maxOutputTokens: 8192 },
+                                generationConfig: { temperature: 0.7, topK: 1, topP: 1, maxOutputTokens: 32768 },
                             }),
                         });
                         if (!response.ok) {
